@@ -1,0 +1,16 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: gitlab-runner-instances
+
+resources:
+  - runner-secret.yaml
+  - runner-instance.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/name: gitlab-runner
+      app.kubernetes.io/component: runner
+

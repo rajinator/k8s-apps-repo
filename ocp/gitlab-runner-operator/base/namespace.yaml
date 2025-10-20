@@ -1,0 +1,11 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gitlab-runner-operator
+  labels:
+    app: gitlab-runner-operator
+  annotations:
+    # Prevent ArgoCD from deleting this namespace when Application is removed
+    argocd.argoproj.io/sync-options: Delete=false
+

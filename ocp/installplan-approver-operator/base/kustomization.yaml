@@ -1,0 +1,18 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Base deployment of InstallPlan Approver Operator
+# References the operator's official deployment manifests from GitHub
+
+resources:
+  # Operator deployment from official repository
+  - github.com/rajinator/installplan-approver-operator/config/default?ref=v0.1.0
+
+labels:
+  - pairs:
+      app.kubernetes.io/name: installplan-approver-operator
+      app.kubernetes.io/component: operator
+      app.kubernetes.io/managed-by: kustomize
+      app.kubernetes.io/part-of: olm-automation
+

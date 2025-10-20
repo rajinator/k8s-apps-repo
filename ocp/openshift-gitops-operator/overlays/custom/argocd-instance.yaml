@@ -1,0 +1,158 @@
+---
+apiVersion: argoproj.io/v1beta1
+kind: ArgoCD
+metadata:
+  name: openshift-gitops
+  namespace: openshift-gitops
+spec:
+  # Resource health checks for OLM resources
+  resourceHealthChecks:
+    - group: argoproj.io
+      kind: Application
+      check: |
+        hs = {}
+        hs.status = "Progressing"
+        hs.message = ""
+        if obj.status ~= nil then
+          if obj.status.health ~= nil then
+            hs.status = obj.status.health.status
+            hs.message = obj.status.health.message
+          end
+        end
+        return hs
+    - group: operators.coreos.com
+      kind: Subscription
+      check: |
+        health_status = {}
+        if obj.status ~= nil then
+          if obj.status.conditions ~= nil then
+            numDegraded = 0
+            numPending = 0
+            msg = ""
+            for i, condition in pairs(obj.status.conditions) do
+              msg = msg .. i .. ": " .. condition.type .. " | " .. condition.status .. "\n"
+              if condition.type == "InstallPlanPending" and condition.status == "True" then
+                numPending = numPending + 1
+              elseif (condition.type == "InstallPlanMissing" and condition.reason ~= "ReferencedInstallPlanNotFound") then
+                numDegraded = numDegraded + 1
+              elseif (condition.type == "CatalogSourcesUnhealthy" or condition.type == "InstallPlanFailed" or condition.type == "ResolutionFailed") and condition.status == "True" then
+                numDegraded = numDegraded + 1
+              end
+            end
+            
+            -- Version pinning: if installedCSV matches startingCSV, treat as healthy
+            -- even if there's a pending InstallPlan (which is an intentionally blocked upgrade)
+            if numDegraded == 0 then
+              if obj.status.installedCSV ~= nil and obj.spec ~= nil and obj.spec.startingCSV ~= nil then
+                if obj.status.installedCSV == obj.spec.startingCSV then
+                  -- Desired version is installed, pending plans are upgrades we're blocking
+                  health_status.status = "Healthy"
+                  health_status.message = "Installed CSV matches desired startingCSV: " .. obj.status.installedCSV
+                  return health_status
+                end
+              end
+              
+              -- No degraded conditions
+              if numPending == 0 then
+                health_status.status = "Healthy"
+                health_status.message = msg
+                return health_status
+              else
+                -- Pending InstallPlan but installedCSV doesn't match startingCSV (initial install or upgrade in progress)
+                health_status.status = "Progressing"
+                health_status.message = "An install plan for a subscription is pending installation"
+                return health_status
+              end
+            else
+              health_status.status = "Degraded"
+              health_status.message = msg
+              return health_status
+            end
+          end
+        end
+        health_status.status = "Progressing"
+        health_status.message = "An install plan for a subscription is pending installation"
+        return health_status
+    - group: operators.coreos.com
+      kind: InstallPlan
+      check: |
+        hs = {}
+        if obj.status ~= nil then
+          if obj.status.phase ~= nil then
+            -- InstallPlan is complete
+            if obj.status.phase == "Complete" then
+              hs.status = "Healthy"
+              hs.message = obj.status.phase
+              return hs
+            end
+            -- InstallPlan failed
+            if obj.status.phase == "Failed" then
+              hs.status = "Degraded"
+              hs.message = "InstallPlan failed: " .. obj.status.phase
+              return hs
+            end
+          end
+        end
+        
+        -- Check if InstallPlan is unapproved (intentionally blocked by version pinning)
+        if obj.spec ~= nil and obj.spec.approved == false then
+          -- This InstallPlan is waiting for approval
+          -- If using installplan-approver-operator with version pinning,
+          -- unapproved plans that don't match the pinned version should not block sync
+          hs.status = "Suspended"
+          hs.message = "InstallPlan pending approval (may be intentionally blocked due to version pinning)"
+          return hs
+        end
+        
+        -- Default: InstallPlan is in progress
+        hs.status = "Progressing"
+        hs.message = "Waiting for InstallPlan to complete"
+        return hs
+
+  # RBAC configuration
+  rbac:
+    defaultPolicy: 'role:admin'
+    policy: |
+      g, system:cluster-admins, role:admin
+      g, cluster-admins, role:admin
+    scopes: '[groups]'
+  
+  # SSO configuration with OpenShift OAuth
+  sso:
+    provider: dex
+    dex:
+      openShiftOAuth: true
+  
+  # HA configuration
+  ha:
+    enabled: false
+  
+  # Server resources
+  server:
+    resources:
+      limits:
+        cpu: 500m
+        memory: 256Mi
+      requests:
+        cpu: 125m
+        memory: 128Mi
+  
+  # Controller resources
+  controller:
+    resources:
+      limits:
+        cpu: "2"
+        memory: 2Gi
+      requests:
+        cpu: 250m
+        memory: 1Gi
+  
+  # Repo server resources
+  repo:
+    resources:
+      limits:
+        cpu: "1"
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 256Mi

@@ -1,0 +1,22 @@
+---
+apiVersion: operators.bapu.cloud/v1alpha1
+kind: InstallPlanApprover
+metadata:
+  name: cluster-wide-approver
+  namespace: operators
+spec:
+  # Enable automatic approval
+  autoApprove: true
+  
+  # Empty targetNamespaces means all namespaces
+  targetNamespaces: []
+  
+  # Optional: Filter by operator names for safety
+  # Recommended for cluster-wide to prevent approving unexpected operators
+  # operatorNames:
+  #   - prometheus
+  #   - grafana-operator
+  #   - cert-manager
+  #   - openshift-gitops-operator
+  #   - gitlab-runner-operator
+

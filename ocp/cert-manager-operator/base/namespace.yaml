@@ -1,0 +1,11 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-manager
+  labels:
+    app: cert-manager
+  annotations:
+    # Prevent ArgoCD from deleting this namespace when Application is removed
+    argocd.argoproj.io/sync-options: Delete=false
+

@@ -1,0 +1,14 @@
+---
+apiVersion: operators.bapu.cloud/v1alpha1
+kind: InstallPlanApprover
+metadata:
+  name: cert-manager-approver
+  namespace: cert-manager
+spec:
+  # Enable automatic approval
+  autoApprove: true
+  
+  # Target only cert-manager namespace
+  targetNamespaces:
+    - cert-manager
+

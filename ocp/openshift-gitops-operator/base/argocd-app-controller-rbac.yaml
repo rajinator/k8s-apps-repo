@@ -1,0 +1,17 @@
+---
+# RoleBinding to allow ArgoCD Application Controller to manage Application resources
+# Required in conjunction with ARGOCD_CLUSTER_CONFIG_NAMESPACES
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: argocd-application-controller
+  namespace: openshift-gitops
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argocd-application-controller
+subjects:
+  - kind: ServiceAccount
+    name: openshift-gitops-argocd-application-controller
+    namespace: openshift-gitops
+

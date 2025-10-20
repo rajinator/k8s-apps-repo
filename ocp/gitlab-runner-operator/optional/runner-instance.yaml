@@ -1,0 +1,40 @@
+---
+apiVersion: apps.gitlab.com/v1beta2
+kind: Runner
+metadata:
+  name: gitlab-runner
+  namespace: gitlab-runner-operator
+spec:
+  # GitLab instance URL
+  gitlabUrl: "https://gitlab.com"
+  
+  # Token from secret
+  token: gitlab-runner-secret
+  
+  # Runner configuration
+  tags: "openshift,kubernetes,docker"
+  locked: false
+  runUntagged: true
+  protected: false
+  
+  # Executor configuration
+  executor: kubernetes
+  
+  # Runner resources
+  concurrent: 10
+  
+  # Build pod configuration
+  buildImage: "alpine:latest"
+  
+  # Pod resources
+  resources:
+    limits:
+      cpu: "1"
+      memory: "1Gi"
+    requests:
+      cpu: "500m"
+      memory: "512Mi"
+  
+  # Service account
+  serviceAccount: gitlab-runner
+

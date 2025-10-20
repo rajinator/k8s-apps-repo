@@ -1,0 +1,18 @@
+---
+# Grant ArgoCD Application Controller cluster-admin permissions
+# This allows ArgoCD to manage all resources across the cluster via GitOps
+# Use this when you want to manage all resources across the cluster via GitOps
+# Instead of creating granular permissions, bind to cluster-admin for ArgoCD as source of truth.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: openshift-gitops-argocd-cluster-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: openshift-gitops-argocd-application-controller
+    namespace: openshift-gitops
+

@@ -1,0 +1,21 @@
+---
+apiVersion: operators.bapu.cloud/v1alpha1
+kind: InstallPlanApprover
+metadata:
+  name: multi-namespace-approver
+  namespace: operators
+spec:
+  # Enable automatic approval
+  autoApprove: true
+  
+  # Target multiple namespaces
+  targetNamespaces:
+    - openshift-gitops-operator
+    - cert-manager
+    - gitlab-runner-operator
+  
+  # Optional: Filter by operator names for safety
+  # operatorNames:
+    # - openshift-gitops-operator
+    # - cert-manager
+    # - gitlab-runner-operator

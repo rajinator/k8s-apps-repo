@@ -1,0 +1,26 @@
+# Sensitive files
+**/runner-secret.yaml
+*secret*.yaml
+
+# Private notes and planning
+NOTES.md
+TODO.md
+.private/
+.notes/
+
+# Temporary files
+*.tmp
+*.log
+.DS_Store
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Kustomize builds
+kustomization-output.yaml
+rendered-*.yaml
+
