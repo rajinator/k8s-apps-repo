@@ -200,61 +200,111 @@ spec:
 3. New InstallPlan created for v0.69.0
 4. Operator automatically approves (now matches `startingCSV`)
 
-## Integration with GitOps
+## Integration with ArgoCD
 
-### ArgoCD
+### Recommended Approach
 
-See [cert-manager example](../cert-manager-operator/) for a complete ArgoCD integration with:
-- Custom resource health checks
-- Version-pinning aware status reporting
-- Automatic sync policies
+For production GitOps environments, deploy the operator and CRs separately:
 
-### Flux
-
-**Option 1: Using Overlay (Operator + CR)**
+**Step 1: Deploy the operator (one time, cluster-wide)**
 ```yaml
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
+apiVersion: argoproj.io/v1alpha1
+kind: Application
 metadata:
   name: installplan-approver-operator
-  namespace: flux-system
+  namespace: openshift-gitops
+  labels:
+    app-type: operator
+    argoproj.io/sync-wave: "1"
 spec:
-  interval: 10m
-  sourceRef:
-    kind: GitRepository
-    name: k8s-apps-repo
-  path: ./ocp/installplan-approver-operator/overlays/multi-namespace
-  prune: true
+  project: default
+  source:
+    repoURL: https://github.com/rajinator/k8s-apps-repo
+    targetRevision: HEAD
+    path: ocp/installplan-approver-operator/overlays/multi-namespace
+  destination:
+    name: in-cluster
+    namespace: iplan-approver-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
 ```
 
-**Option 2: Using Base + Custom CR**
+**Step 2: Configure operators to use centralized approval**
 ```yaml
-# Deploy operator
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
+apiVersion: argoproj.io/v1alpha1
+kind: Application
 metadata:
-  name: installplan-approver-operator
-  namespace: flux-system
+  name: cert-manager-operator
+  namespace: openshift-gitops
+  labels:
+    app-type: operator
+    approval-mode: centralized  # ← Indicates centralized approval
+    argoproj.io/sync-wave: "5"  # ← Deploy after approver operator
 spec:
-  interval: 10m
-  sourceRef:
-    kind: GitRepository
-    name: k8s-apps-repo
-  path: ./ocp/installplan-approver-operator/base
-  prune: true
----
-# Deploy your custom CR
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: GitRepository
-metadata:
-  name: my-custom-approvers
-  namespace: flux-system
-spec:
-  interval: 5m
-  url: https://github.com/myorg/my-configs
-  ref:
-    branch: main
+  project: default
+  source:
+    repoURL: https://github.com/rajinator/k8s-apps-repo
+    targetRevision: HEAD
+    path: ocp/cert-manager-operator/base
+  destination:
+    name: in-cluster
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
 ```
+
+### Custom Resource Health Checks
+
+Add these health checks to your ArgoCD instance to properly track version-pinned operators:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: ArgoCD
+metadata:
+  name: openshift-gitops
+  namespace: openshift-gitops
+spec:
+  resourceHealthChecks:
+    # Mark unapproved InstallPlans as "Suspended" (not Progressing)
+    - group: operators.coreos.com
+      kind: InstallPlan
+      check: |
+        hs = {}
+        if obj.spec.approved == false then
+          hs.status = "Suspended"
+          hs.message = "InstallPlan not approved (waiting for version match or manual approval)"
+          return hs
+        end
+        -- (rest of health check logic)
+    
+    # Mark Subscriptions as "Healthy" if installedCSV matches startingCSV
+    - group: operators.coreos.com
+      kind: Subscription
+      check: |
+        hs = {}
+        if obj.status ~= nil and obj.status.installedCSV ~= nil then
+          if obj.spec.startingCSV ~= nil and obj.status.installedCSV == obj.spec.startingCSV then
+            hs.status = "Healthy"
+            hs.message = "Installed: " .. obj.status.installedCSV
+            return hs
+          end
+        end
+        -- (rest of health check logic)
+```
+
+**Full health check examples:** See [openshift-gitops-operator custom overlay](../openshift-gitops-operator/overlays/custom/)
+
+### Complete Example
+
+See the [cert-manager-operator](../cert-manager-operator/) directory for a complete working example with:
+- Base manifests with version pinning
+- ArgoCD Application manifests
+- Integration with centralized InstallPlan approval
+- Custom health checks for accurate status reporting
 
 ## Monitoring
 
