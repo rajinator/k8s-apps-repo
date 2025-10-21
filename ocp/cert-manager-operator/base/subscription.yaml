@@ -1,16 +1,18 @@
 ---
+# Subscription for Red Hat cert-manager Operator for Red Hat OpenShift
+# This is the official Red Hat supported operator (not community)
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
-  name: cert-manager
-  namespace: cert-manager
+  name: openshift-cert-manager-operator
+  namespace: cert-manager-operator
 spec:
-  channel: stable
-  name: cert-manager
-  source: community-operators
+  channel: stable-v1
+  name: openshift-cert-manager-operator
+  source: redhat-operators
   sourceNamespace: openshift-marketplace
-  # Manual approval for install plans - enables version control via GitOps
+  # Manual approval - will be auto-approved by installplan-approver-operator
   installPlanApproval: Manual
   # Pin to specific version v1.15.0
-  startingCSV: cert-manager.v1.15.2
+  startingCSV: cert-manager-operator.v1.15.0
 

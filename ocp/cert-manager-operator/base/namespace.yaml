@@ -1,10 +1,14 @@
 ---
+# Namespace for Red Hat cert-manager Operator
+# The operator itself runs in cert-manager-operator namespace
+# It deploys cert-manager components into cert-manager namespace
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: cert-manager
+  name: cert-manager-operator
   labels:
-    app: cert-manager
+    app: cert-manager-operator
+    openshift.io/cluster-monitoring: "true"
   annotations:
     # Prevent ArgoCD from deleting this namespace when Application is removed
     argocd.argoproj.io/sync-options: Delete=false

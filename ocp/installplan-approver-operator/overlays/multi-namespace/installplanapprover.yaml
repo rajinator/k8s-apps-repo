@@ -11,11 +11,11 @@ spec:
   # Target multiple namespaces
   targetNamespaces:
     - openshift-gitops-operator
-    - cert-manager
+    - cert-manager-operator
     - gitlab-runner-operator
   
   # Optional: Filter by operator names for safety
   # operatorNames:
     # - openshift-gitops-operator
-    # - cert-manager
+    # - cert-manager-operator
     # - gitlab-runner-operator

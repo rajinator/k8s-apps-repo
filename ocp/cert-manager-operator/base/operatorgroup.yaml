@@ -1,10 +1,13 @@
 ---
+# OperatorGroup for Red Hat cert-manager Operator
+# Required for the operator to watch and manage resources
 apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
-  name: cert-manager-operator-group
-  namespace: cert-manager
+  name: cert-manager-operator
+  namespace: cert-manager-operator
 spec:
-  # Watch all namespaces
+  # AllNamespaces mode - operator can manage resources across all namespaces
+  # This is the recommended mode for cert-manager operator 1.15.0+
   targetNamespaces: []
 

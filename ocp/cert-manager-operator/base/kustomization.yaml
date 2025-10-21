@@ -4,6 +4,11 @@ kind: Kustomization
 
 metadata:
   name: cert-manager-operator
+  annotations:
+    config.kubernetes.io/description: "Red Hat cert-manager Operator for Red Hat OpenShift"
+
+# Set default namespace for all resources
+namespace: cert-manager-operator
 
 resources:
   - namespace.yaml
@@ -14,4 +19,5 @@ labels:
   - pairs:
       app.kubernetes.io/name: cert-manager-operator
       app.kubernetes.io/component: operator
+      app.kubernetes.io/managed-by: openshift-gitops
 

@@ -1,0 +1,18 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Overlay: cert-manager with recursive DNS nameservers
+# Configures cert-manager to use specific DNS servers for DNS-01 ACME challenges
+# Useful when your cluster's DNS can't resolve public DNS records
+
+resources:
+  - ../../base
+  - certManager.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/name: cert-manager-operator
+      app.kubernetes.io/component: operator
+      app.kubernetes.io/managed-by: openshift-gitops
+      overlay: recursive-nameservers

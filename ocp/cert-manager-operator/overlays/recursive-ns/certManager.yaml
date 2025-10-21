@@ -1,0 +1,17 @@
+---
+# CertManager CR - Custom configuration for cert-manager controller
+# This configures cert-manager to use specific DNS resolvers for DNS-01 challenges
+# Useful for environments where cluster DNS cannot resolve public records
+apiVersion: operator.openshift.io/v1alpha1
+kind: CertManager
+metadata:
+  name: cluster
+spec:
+  controllerConfig:
+    overrideArgs:
+      # Configure recursive DNS nameservers for DNS-01 ACME challenges
+      # Using public DNS servers: Google (8.8.8.8) and Cloudflare (1.1.1.1)
+      # This ensures cert-manager can validate DNS records even if cluster DNS is restricted
+      - "--dns01-recursive-nameservers=8.8.8.8:53,1.1.1.1:53"
+      # Optional: Add nameserver for checking authoritative nameservers
+      # - "--dns01-recursive-nameservers-only=false"
