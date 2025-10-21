@@ -1,247 +1,246 @@
-# Cert Manager Operator
+# Red Hat cert-manager Operator for Red Hat OpenShift
 
-Deployment configuration for cert-manager operator on OpenShift using OLM.
+Official Red Hat supported cert-manager operator deployment configuration for OpenShift using OLM.
+
+> **Note:** This is the **Red Hat certified operator** from `redhat-operators` catalog, not the community version.
 
 ## Version
 
-**Current Version:** v1.15.0
+**Current Version:** v1.15.0  
+**Channel:** stable-v1  
+**Operator:** openshift-cert-manager-operator
 
 ## Structure
 
 ```
 cert-manager-operator/
 ├── base/                              # Base configuration
-│   ├── namespace.yaml                 # Operator namespace
-│   ├── operatorgroup.yaml             # OperatorGroup (all namespaces)
+│   ├── namespace.yaml                 # cert-manager-operator namespace
+│   ├── operatorgroup.yaml             # OperatorGroup (AllNamespaces mode)
 │   ├── subscription.yaml              # Subscription with Manual approval
 │   └── kustomization.yaml
 └── overlays/
-    └── installplanapprover-test/      # Test overlay with InstallPlanApprover
-        ├── installplanapprover.yaml   # InstallPlanApprover CR
+    └── recursive-ns/                  # Overlay with recursive DNS nameservers
+        ├── certManager.yaml           # CertManager CR with DNS config
         └── kustomization.yaml
+```
+
+## Architecture
+
+```
+cert-manager-operator namespace (operator pod)
+    ↓ manages
+cert-manager namespace (cert-manager components)
+    ├── cert-manager (controller)
+    ├── cert-manager-cainjector
+    └── cert-manager-webhook
 ```
 
 ## Use Cases
 
-### Base: Manual Approval (Version Control)
+### Base: Standard Deployment
 
-Use this when you want precise version control with manual InstallPlan approval:
+Use this for standard OpenShift deployments with working DNS:
 
 ```bash
 oc apply -k base/
 ```
 
 **What happens:**
-1. Creates `cert-manager-operator` namespace
-2. Creates OperatorGroup
+1. Creates `cert-manager-operator` namespace with monitoring enabled
+2. Creates OperatorGroup (AllNamespaces mode)
 3. Creates Subscription with `installPlanApproval: Manual`
-4. InstallPlan is created but **NOT approved** (manual intervention required)
+4. InstallPlan is created and auto-approved by InstallPlanApprover operator
 
-**To approve manually:**
-```bash
-# List InstallPlans
-oc get installplans -n cert-manager-operator
+**Prerequisites:**
+- Centralized InstallPlanApprover operator must be deployed
+- See: https://github.com/rajinator/installplan-approver-operator
 
-# Approve specific InstallPlan
-oc patch installplan <installplan-name> -n cert-manager-operator \
-  --type merge --patch '{"spec":{"approved":true}}'
-```
+### Overlay: Recursive DNS Nameservers
 
-### Overlay: With InstallPlanApprover (GitOps + Automation)
-
-Use this to test the InstallPlanApprover operator:
+Use this for homelab/restricted environments where cluster DNS can't resolve public DNS:
 
 ```bash
-oc apply -k overlays/installplanapprover-test/
+oc apply -k overlays/recursive-ns/
 ```
 
 **What happens:**
 1. Everything from base/ is applied
-2. InstallPlanApprover CR is created
-3. InstallPlanApprover operator automatically approves the InstallPlan
-4. cert-manager operator installs automatically
+2. CertManager CR is created to configure recursive DNS nameservers (8.8.8.8, 1.1.1.1)
+3. cert-manager uses these DNS servers for DNS-01 ACME challenge validation
 
-**Prerequisites:**
-- InstallPlanApprover operator must be deployed and running
-- See: https://github.com/rajinator/installplan-approver-operator
+**When to use:**
+- Homelab behind NAT
+- Firewall restricts DNS queries
+- Cluster DNS can't resolve public records
+- Split-horizon DNS environments
 
-## Testing the InstallPlanApprover
+## Verification
 
-### Step 1: Deploy InstallPlanApprover Operator
-
-```bash
-# Clone and setup InstallPlanApprover operator
-git clone https://github.com/rajinator/installplan-approver-operator
-cd installplan-approver-operator
-
-# Install CRD
-make install
-
-# Run locally (easiest for testing)
-make run
-
-# Or deploy to cluster
-# make deploy IMG=<your-image>
-```
-
-### Step 2: Deploy cert-manager with InstallPlanApprover
-
-In another terminal:
+After installation, verify the operator is running:
 
 ```bash
-cd k8s-apps-repo
+# Check subscription
+oc get subscription -n cert-manager-operator openshift-cert-manager-operator
 
-# Apply the overlay
-oc apply -k ocp/cert-manager-operator/overlays/installplanapprover-test/
-```
+# Check InstallPlan (should be auto-approved by InstallPlanApprover)
+oc get installplans -n cert-manager-operator
 
-### Step 3: Watch It Work
-
-```bash
-# Watch InstallPlans (should get approved automatically)
-oc get installplans -n cert-manager-operator -w
-
-# Watch InstallPlanApprover status
-oc get installplanapprovers -n cert-manager-operator cert-manager-approver -o yaml
-
-# Check cert-manager operator deployment
+# Check CSV
 oc get csv -n cert-manager-operator
+
+# Check operator pods
+oc get pods -n cert-manager-operator
+
+# Check cert-manager components (deployed by operator)
+oc get pods -n cert-manager
+
+# Expected output:
+# NAME                                       READY   STATUS    RESTARTS   AGE
+# cert-manager-<hash>                        1/1     Running   0          3m
+# cert-manager-cainjector-<hash>             1/1     Running   0          3m
+# cert-manager-webhook-<hash>                1/1     Running   0          3m
 ```
 
-### Step 4: Check Logs
+### Verify Recursive DNS Configuration (if using overlay)
 
 ```bash
-# If running locally (Terminal 1)
-# Logs appear in the terminal where you ran 'make run'
+# Check CertManager CR exists
+oc get certmanager cluster
 
-# If deployed to cluster
-oc logs -f deployment/installplan-approver-operator-controller-manager \
-  -n installplan-approver-operator-system
-```
+# Check cert-manager deployment has DNS arguments
+oc get deployment cert-manager -n cert-manager -o yaml | grep dns01-recursive
 
-## Expected Behavior
-
-### Without InstallPlanApprover
-
-```bash
-oc apply -k base/
-
-# InstallPlan created but not approved
-oc get installplans -n cert-manager-operator
-# NAME                            CSV                                APPROVAL    APPROVED
-# install-xxxxx                   cert-manager-operator.v1.15.0      Manual      false
-
-# Manual approval needed
-oc patch installplan install-xxxxx -n cert-manager-operator \
-  --type merge --patch '{"spec":{"approved":true}}'
-```
-
-### With InstallPlanApprover
-
-```bash
-oc apply -k overlays/installplanapprover-test/
-
-# InstallPlan automatically approved (within ~100ms)
-oc get installplans -n cert-manager-operator
-# NAME                            CSV                                APPROVAL    APPROVED
-# install-xxxxx                   cert-manager-operator.v1.15.0      Manual      true
-
-# Check approver status
-oc get installplanapprovers cert-manager-approver -n cert-manager-operator -o yaml
-# status:
-#   approvedCount: 1
-#   lastApprovedPlan: cert-manager-operator/install-xxxxx
-#   lastApprovedTime: 2025-10-20T...
+# Should show:
+# - --dns01-recursive-nameservers=8.8.8.8:53,1.1.1.1:53
 ```
 
 ## Version Updates
 
 To update cert-manager version:
 
-1. Edit `base/subscription.yaml`:
+1. Check available versions:
+   ```bash
+   oc get packagemanifest openshift-cert-manager-operator \
+     -n openshift-marketplace -o yaml
+   ```
+
+2. Edit `base/subscription.yaml`:
    ```yaml
    spec:
      startingCSV: cert-manager-operator.v1.16.0  # New version
    ```
 
-2. Commit to Git (GitOps workflow)
+3. Commit to Git (GitOps workflow)
 
-3. Apply changes:
+4. Apply changes via ArgoCD or manually:
    ```bash
-   oc apply -k overlays/installplanapprover-test/
+   oc apply -k base/
+   # or
+   oc apply -k overlays/recursive-ns/
    ```
 
-4. New InstallPlan will be created and automatically approved
+5. New InstallPlan will be created and automatically approved by InstallPlanApprover
 
 ## Troubleshooting
 
 ### InstallPlan Not Approved
 
-**Check InstallPlanApprover is running:**
+**Check centralized InstallPlanApprover operator:**
 ```bash
-# If running locally
-ps aux | grep "make run"
-
-# If deployed
-oc get pods -n installplan-approver-operator-system
+oc get pods -n installplan-approver-operator
+oc logs -n installplan-approver-operator -l app.kubernetes.io/name=installplan-approver-operator
 ```
 
 **Check InstallPlanApprover CR exists:**
 ```bash
-oc get installplanapprovers -n cert-manager-operator
+oc get installplanapprovers -A | grep cert-manager
 ```
 
-**Check InstallPlanApprover logs:**
+**Manually approve if needed:**
 ```bash
-# Look for approval messages
-# Should see: "Approved InstallPlan install-xxxxx in namespace cert-manager-operator"
+oc patch installplan <installplan-name> -n cert-manager-operator \
+  --type merge --patch '{"spec":{"approved":true}}'
 ```
 
 ### InstallPlan Not Created
 
 **Check Subscription:**
 ```bash
-oc get subscription -n cert-manager-operator cert-manager-operator -o yaml
+oc get subscription -n cert-manager-operator \
+  openshift-cert-manager-operator -o yaml
 ```
 
 **Check CatalogSource:**
 ```bash
-oc get catalogsource -n openshift-marketplace community-operators
+oc get catalogsource -n openshift-marketplace redhat-operators
+
+# Check if operator is available
+oc get packagemanifests | grep openshift-cert-manager-operator
 ```
 
-**Check operator availability:**
+**Check OperatorGroup:**
 ```bash
-oc get packagemanifests | grep cert-manager-operator
+oc get operatorgroup -n cert-manager-operator
+```
+
+### cert-manager Components Not Deploying
+
+**Check cert-manager namespace exists:**
+```bash
+oc get namespace cert-manager
+```
+
+The operator automatically creates this namespace.
+
+**Check operator logs:**
+```bash
+oc logs -n cert-manager-operator \
+  -l app.kubernetes.io/name=cert-manager-operator
 ```
 
 ### Wrong Version Installed
 
+**Check installed CSV:**
+```bash
+oc get csv -n cert-manager-operator
+```
+
 **Check startingCSV in Subscription:**
 ```bash
-oc get subscription -n cert-manager-operator cert-manager-operator -o yaml | grep startingCSV
+oc get subscription -n cert-manager-operator \
+  openshift-cert-manager-operator -o jsonpath='{.spec.startingCSV}'
 ```
 
 **List available versions:**
 ```bash
-oc get packagemanifests cert-manager-operator -o yaml
+oc get packagemanifest openshift-cert-manager-operator \
+  -n openshift-marketplace -o yaml
 ```
 
 ## Cleanup
 
-```bash
-# Remove cert-manager operator
-oc delete -k overlays/installplanapprover-test/
+**Warning:** This will remove cert-manager and all certificates!
 
-# Or just the base
+```bash
+# Remove the operator
+oc delete -k overlays/recursive-ns/
+# or
 oc delete -k base/
 
 # Force cleanup if needed
+oc delete csv -n cert-manager-operator --all
 oc delete namespace cert-manager-operator
+oc delete namespace cert-manager
 ```
+
+## GitOps Integration
+
+This configuration is designed for ArgoCD/OpenShift GitOps deployment. See [GITOPS-INTEGRATION.md](./GITOPS-INTEGRATION.md) for details.
 
 ## References
 
-- [Cert Manager Operator](https://github.com/cert-manager/cert-manager-operator)
+- [Red Hat cert-manager Documentation](https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/security_and_compliance/cert-manager-operator-for-red-hat-openshift)
+- [cert-manager upstream docs](https://cert-manager.io/docs/)
 - [OLM Documentation](https://olm.operatorframework.io/)
-- [InstallPlanApprover Operator](../../installplan-approver-operator/)
-
+- [InstallPlanApprover Operator](https://github.com/rajinator/installplan-approver-operator)
