@@ -1,0 +1,20 @@
+---
+# InstallPlanApprover CR - Single namespace configuration
+# Approves InstallPlans in one specific namespace (for testing)
+apiVersion: operators.bapu.cloud/v1alpha1
+kind: InstallPlanApprover
+metadata:
+  name: single-namespace-approver
+  namespace: iplan-approver-system
+spec:
+  # Enable automatic approval
+  autoApprove: true
+  
+  # Target single namespace
+  targetNamespaces:
+    - cert-manager-operator
+  
+  # Optional: Filter by operator name
+  # operatorNames:
+  #   - openshift-cert-manager-operator
+

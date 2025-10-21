@@ -4,15 +4,13 @@ kind: Kustomization
 
 # Base deployment of InstallPlan Approver Operator
 # References the operator's official deployment manifests from GitHub
+# The upstream repo already has proper labels, so we don't add more here
 
 resources:
   # Operator deployment from official repository
   - github.com/rajinator/installplan-approver-operator/config/default?ref=v0.1.0
 
-labels:
-  - pairs:
-      app.kubernetes.io/name: installplan-approver-operator
-      app.kubernetes.io/component: operator
-      app.kubernetes.io/managed-by: kustomize
-      app.kubernetes.io/part-of: olm-automation
+# Note: No additional labels in base
+# The upstream operator manifests already have appropriate labels
+# Overlays can add their own labels for tracking (overlay name, instance, etc.)
 
