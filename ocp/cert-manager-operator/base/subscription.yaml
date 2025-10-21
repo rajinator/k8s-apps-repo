@@ -12,5 +12,5 @@ spec:
   # Manual approval for install plans - enables version control via GitOps
   installPlanApproval: Manual
   # Pin to specific version v1.15.0
-  startingCSV: cert-manager.v1.15.0
+  startingCSV: cert-manager.v1.15.2
 
