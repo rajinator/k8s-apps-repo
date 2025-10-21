@@ -2,18 +2,16 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Example: Cluster-wide InstallPlan approval
-# Use case: Platform operators, cluster-admin managed operators
+# Overlay: Cluster-wide InstallPlan approval
+# Deploys the operator + CR for approving all namespaces
 # Warning: Approves InstallPlans in ALL namespaces (use operatorNames filter for safety)
 
 resources:
   - ../../base
   - installplanapprover.yaml
 
-namespace: operators
-
 labels:
   - pairs:
-      example: cluster-wide
+      overlay: cluster-wide
       app.kubernetes.io/instance: cluster-wide-approver
 

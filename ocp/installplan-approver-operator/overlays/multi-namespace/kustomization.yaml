@@ -2,17 +2,15 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Example: Multi-namespace InstallPlan approval
-# Use case: Multiple team namespaces, environment-specific operators
+# Overlay: Multi-namespace InstallPlan approval
+# Deploys the operator + CR for approving multiple namespaces
 
 resources:
   - ../../base
   - installplanapprover.yaml
 
-namespace: operators
-
 labels:
   - pairs:
-      example: multi-namespace
+      overlay: multi-namespace
       app.kubernetes.io/instance: multi-namespace-approver
 

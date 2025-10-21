@@ -22,55 +22,98 @@ This operator automates InstallPlan approvals while maintaining precise version 
 - **GitOps-friendly**: Fully automated approval with Git as the source of truth
 - **Efficient**: Minimal API load with intelligent requeue backoff
 
+## Repository Structure
+
+```
+ocp/installplan-approver-operator/
+├── README.md
+├── base/                           # Operator only (no CRs)
+│   └── kustomization.yaml          # References operator from GitHub
+└── overlays/                       # Complete deployments (operator + CR)
+    ├── single-namespace/           # For one namespace
+    │   ├── kustomization.yaml
+    │   └── installplanapprover.yaml
+    ├── multi-namespace/            # For multiple namespaces (recommended)
+    │   ├── kustomization.yaml
+    │   └── installplanapprover.yaml
+    └── cluster-wide/               # For all namespaces (use with caution)
+        ├── kustomization.yaml
+        └── installplanapprover.yaml
+```
+
 ## Quick Start
 
-### Deploy the Operator
+### Deployment Options
 
-**Option 1: Using pre-built image from GHCR**
+**Option 1: All-in-One Overlay (Recommended)**
 ```bash
-kubectl apply -k github.com/rajinator/installplan-approver-operator/config/default?ref=v0.1.0
+# Deploy operator + CR together using an overlay
+oc apply -k ocp/installplan-approver-operator/overlays/multi-namespace/
 ```
 
-**Option 2: Using this repository's base**
+**Option 2: Base Only (For custom CRs)**
 ```bash
+# Deploy operator only, then create your own InstallPlanApprover CRs
 oc apply -k ocp/installplan-approver-operator/base/
+oc apply -f my-custom-approver.yaml
 ```
 
-### Create an InstallPlanApprover Resource
+**Option 3: Direct from Operator Repository**
+```bash
+# Deploy from the operator's GitHub repository
+oc apply -k 'github.com/rajinator/installplan-approver-operator/config/default?ref=v0.1.0'
+# Then create your InstallPlanApprover CRs separately
+```
 
-Choose one of the examples below based on your use case.
+## Overlays
 
-## Examples
+Pre-configured overlays for common deployment patterns. Each overlay includes both the operator and an InstallPlanApprover CR.
 
 ### Single Namespace
 
-Approve InstallPlans for one specific namespace:
+Deploy operator + CR for approving InstallPlans in one namespace:
 
 ```bash
-oc apply -k ocp/installplan-approver-operator/examples/single-namespace/
+oc apply -k ocp/installplan-approver-operator/overlays/single-namespace/
 ```
+
+**What it deploys:**
+- Operator in `iplan-approver-system` namespace
+- InstallPlanApprover CR in `cert-manager` namespace
+- Approves only `cert-manager` namespace
 
 **Use case:** Testing, isolated operator deployments
 
 ### Multi-Namespace
 
-Approve InstallPlans across multiple namespaces:
+Deploy operator + CR for approving InstallPlans across multiple namespaces:
 
 ```bash
-oc apply -k ocp/installplan-approver-operator/examples/multi-namespace/
+oc apply -k ocp/installplan-approver-operator/overlays/multi-namespace/
 ```
+
+**What it deploys:**
+- Operator in `iplan-approver-system` namespace
+- InstallPlanApprover CR in `operators` namespace
+- Approves: `openshift-gitops-operator`, `cert-manager`, `gitlab-runner-operator`
 
 **Use case:** Multiple team namespaces, environment-specific operators
 
 ### Cluster-Wide
 
-Approve InstallPlans across all namespaces:
+Deploy operator + CR for approving InstallPlans across all namespaces:
 
 ```bash
-oc apply -k ocp/installplan-approver-operator/examples/cluster-wide/
+oc apply -k ocp/installplan-approver-operator/overlays/cluster-wide/
 ```
 
-**Use case:** Platform operators, cluster-admin managed operators
+**What it deploys:**
+- Operator in `iplan-approver-system` namespace
+- InstallPlanApprover CR in `iplan-approver-system` namespace
+- Approves: **ALL namespaces** (targetNamespaces: [])
+
+**Use case:** Platform operators, cluster-admin managed operators  
+**Warning:** Use `operatorNames` filter for safety!
 
 ## Configuration
 
@@ -168,7 +211,25 @@ See [cert-manager example](../cert-manager-operator/) for a complete ArgoCD inte
 
 ### Flux
 
+**Option 1: Using Overlay (Operator + CR)**
 ```yaml
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: installplan-approver-operator
+  namespace: flux-system
+spec:
+  interval: 10m
+  sourceRef:
+    kind: GitRepository
+    name: k8s-apps-repo
+  path: ./ocp/installplan-approver-operator/overlays/multi-namespace
+  prune: true
+```
+
+**Option 2: Using Base + Custom CR**
+```yaml
+# Deploy operator
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -181,6 +242,18 @@ spec:
     name: k8s-apps-repo
   path: ./ocp/installplan-approver-operator/base
   prune: true
+---
+# Deploy your custom CR
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: my-custom-approvers
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: https://github.com/myorg/my-configs
+  ref:
+    branch: main
 ```
 
 ## Monitoring

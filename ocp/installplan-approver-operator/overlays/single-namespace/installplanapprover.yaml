@@ -3,7 +3,7 @@ apiVersion: operators.bapu.cloud/v1alpha1
 kind: InstallPlanApprover
 metadata:
   name: single-namespace-approver
-  namespace: operators
+  namespace: cert-manager
 spec:
   # Enable automatic approval
   autoApprove: true
