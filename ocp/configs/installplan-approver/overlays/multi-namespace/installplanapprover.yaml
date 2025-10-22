@@ -14,7 +14,7 @@ spec:
   targetNamespaces:
     - openshift-gitops-operator
     - cert-manager-operator
-    - gitlab-runner-operator
+    # - gitlab-runner-operator
   
   # Optional: Filter by operator names for additional safety
   # operatorNames:
