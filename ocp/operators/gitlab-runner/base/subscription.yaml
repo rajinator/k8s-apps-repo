@@ -12,5 +12,5 @@ spec:
   # Manual approval for install plans
   installPlanApproval: Manual
   # Pin to specific version - update as needed
-  startingCSV: gitlab-runner-operator.v1.40.0
+  startingCSV: gitlab-runner-operator.v1.41.1
 
