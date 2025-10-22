@@ -39,7 +39,7 @@ spec:
   # Dashboard configuration
   dashboard:
     enabled: true
-    ssl: true
+    ssl: false
 
   # Prometheus monitoring
   monitoring:
@@ -49,8 +49,7 @@ spec:
     externalMgrPrometheusPort: 9283
 
   network:
-    # Enable host networking for better performance
-    provider: host
+    # Use default pod networking
     connections:
       encryption:
         enabled: false
