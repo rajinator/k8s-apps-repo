@@ -19,10 +19,12 @@ k8s-apps-repo/
     │   ├── installplan-approver/  # InstallPlan automation
     │   ├── openshift-gitops/      # ArgoCD/GitOps
     │   ├── cert-manager/          # Certificate management
-    │   └── gitlab-runner/         # CI/CD runners
+    │   ├── gitlab-runner/         # CI/CD runners
+    │   └── rook-ceph/             # Cloud-native storage
     ├── configs/      # Configuration CRs for operators
     │   ├── installplan-approver/  # InstallPlanApprover CRs
-    │   └── cert-manager/          # [Planned] ClusterIssuer, Certificates
+    │   ├── cert-manager/          # [Planned] ClusterIssuer, Certificates
+    │   └── rook-ceph/             # CephCluster and storage classes
     └── apps/         # Application deployments
 ```
 
@@ -51,6 +53,7 @@ k8s-apps-repo/
 | [OpenShift GitOps](ocp/operators/openshift-gitops/) | OLM | ArgoCD for GitOps CD with self-management |
 | [cert-manager](ocp/operators/cert-manager/) | OLM | Red Hat cert-manager for certificate management |
 | [GitLab Runner](ocp/operators/gitlab-runner/) | OLM | Manage GitLab CI/CD runners |
+| [Rook Ceph](ocp/operators/rook-ceph/) | Operator | Cloud-native storage orchestrator for Ceph (v1.17.8) |
 
 #### Configs
 
@@ -58,6 +61,7 @@ k8s-apps-repo/
 |---------------|------|-------------|
 | [InstallPlan Approver Config](ocp/configs/installplan-approver/) | CR | InstallPlanApprover CRs (multi-namespace, single-namespace, cluster-wide) |
 | [cert-manager Config](ocp/configs/cert-manager/) | CR | ClusterIssuer and Certificate resources (placeholder) |
+| [Rook Ceph Cluster](ocp/configs/rook-ceph/) | CR | Production CephCluster with storage classes (RWO block + RWX filesystem) |
 
 ### Kubernetes
 
@@ -73,6 +77,11 @@ oc apply -k ocp/operators/gitlab-runner/base/
 
 # Example: InstallPlanApprover CR (multi-namespace)
 oc apply -k ocp/configs/installplan-approver/overlays/multi-namespace/
+
+# Example: Rook Ceph Storage (operator + cluster)
+oc apply -k ocp/operators/rook-ceph/base/
+# Wait for operator to be ready, then:
+oc apply -k ocp/configs/rook-ceph/overlays/production/
 ```
 
 ### Deploy on Kubernetes
@@ -206,7 +215,8 @@ k8s-apps-repo/
     │   │   └── overlays/
     │   ├── openshift-gitops/
     │   ├── cert-manager/
-    │   └── gitlab-runner/
+    │   ├── gitlab-runner/
+    │   └── rook-ceph/
     ├── configs/                 # Configuration CRs
     │   ├── installplan-approver/
     │   │   ├── README.md
@@ -214,7 +224,10 @@ k8s-apps-repo/
     │   │       ├── multi-namespace/
     │   │       ├── single-namespace/
     │   │       └── cluster-wide/
-    │   └── cert-manager/
+    │   ├── cert-manager/
+    │   └── rook-ceph/
+    │       └── overlays/
+    │           └── production/
     └── apps/                    # Application deployments
         └── README.md
 ```

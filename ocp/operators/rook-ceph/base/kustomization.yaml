@@ -1,0 +1,33 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Rook Ceph Operator v1.17.8 for OpenShift
+# Deployment order:
+#   1. CRDs (CustomResourceDefinitions)
+#   2. Common (RBAC, ServiceAccounts, ConfigMaps)
+#   3. Operator (OpenShift-specific deployment)
+
+namespace: rook-ceph
+
+resources:
+  # 1. CRDs - Custom Resource Definitions for Ceph components
+  - https://raw.githubusercontent.com/rook/rook/v1.17.8/deploy/examples/crds.yaml
+  
+  # 2. Common - RBAC, ServiceAccounts, and shared resources
+  - https://raw.githubusercontent.com/rook/rook/v1.17.8/deploy/examples/common.yaml
+  
+  # 3. OpenShift Operator - Uses SecurityContextConstraints instead of PSP
+  - https://raw.githubusercontent.com/rook/rook/v1.17.8/deploy/examples/operator-openshift.yaml
+
+# Labels for tracking
+commonLabels:
+  app.kubernetes.io/name: rook-ceph
+  app.kubernetes.io/component: operator
+  app.kubernetes.io/version: v1.17.8
+  app.kubernetes.io/managed-by: kustomize
+
+# Annotations
+commonAnnotations:
+  app.kubernetes.io/documentation: https://rook.io/docs/rook/v1.17/
+

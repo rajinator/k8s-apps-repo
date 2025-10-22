@@ -1,0 +1,159 @@
+---
+apiVersion: ceph.rook.io/v1
+kind: CephCluster
+metadata:
+  name: rook-ceph
+  namespace: rook-ceph
+spec:
+  # Ceph version
+  cephVersion:
+    image: quay.io/ceph/ceph:v18.2.4
+    allowUnsupported: false
+
+  # Data directory on host nodes
+  dataDirHostPath: /var/lib/rook
+
+  # Skip upgrade checks for new deployments
+  skipUpgradeChecks: false
+
+  # Continue if devices are already in use
+  continueUpgradeAfterChecksEvenIfNotHealthy: false
+
+  # Wait timeout for healthy OSDs during upgrade
+  waitTimeoutForHealthyOSDInMinutes: 10
+
+  mon:
+    # Number of monitor daemons (must be odd, recommended 3 for HA)
+    count: 3
+    allowMultiplePerNode: false
+
+  mgr:
+    # Number of manager daemons
+    count: 2
+    allowMultiplePerNode: false
+    modules:
+      # Enable Ceph dashboard
+      - name: rook
+        enabled: true
+
+  # Dashboard configuration
+  dashboard:
+    enabled: true
+    ssl: true
+
+  # Prometheus monitoring
+  monitoring:
+    enabled: true
+    # Use OpenShift's Prometheus
+    externalMgrEndpoints: []
+    externalMgrPrometheusPort: 9283
+
+  network:
+    # Enable host networking for better performance
+    provider: host
+    connections:
+      encryption:
+        enabled: false
+      compression:
+        enabled: false
+
+  # Crash collector for debugging
+  crashCollector:
+    disable: false
+
+  # Log collector
+  logCollector:
+    enabled: true
+    periodicity: daily
+    maxLogSize: 500M
+
+  # Cleanup policy on cluster deletion
+  cleanupPolicy:
+    confirmation: ""
+    sanitizeDisks:
+      method: quick
+      dataSource: zero
+      iteration: 1
+    allowUninstallWithVolumes: false
+
+  # Annotations and labels
+  annotations:
+    all:
+      app.kubernetes.io/part-of: rook-ceph
+  labels:
+    all:
+      app.kubernetes.io/managed-by: rook-ceph-operator
+
+  # Storage configuration
+  storage:
+    useAllNodes: true
+    useAllDevices: false
+    # Explicitly specify /dev/sdb
+    devices:
+      - name: "sdb"
+    
+    config:
+      # OSD tuning for production
+      osdsPerDevice: "1"
+      # Database size per OSD
+      databaseSizeMB: "1024"
+      # Journal size per OSD (if using filestore)
+      journalSizeMB: "1024"
+
+  # Disruption management for upgrades
+  disruptionManagement:
+    managePodBudgets: true
+    osdMaintenanceTimeout: 30
+    pgHealthCheckTimeout: 0
+
+  # Resource limits (adjust based on your nodes)
+  resources:
+    mgr:
+      limits:
+        memory: "1Gi"
+      requests:
+        cpu: "500m"
+        memory: "512Mi"
+    mon:
+      limits:
+        memory: "2Gi"
+      requests:
+        cpu: "1000m"
+        memory: "1Gi"
+    osd:
+      limits:
+        memory: "4Gi"
+      requests:
+        cpu: "1000m"
+        memory: "2Gi"
+    prepareosd:
+      limits:
+        memory: "1Gi"
+      requests:
+        cpu: "500m"
+        memory: "50Mi"
+    crashcollector:
+      limits:
+        memory: "60Mi"
+      requests:
+        cpu: "100m"
+        memory: "60Mi"
+    logcollector:
+      limits:
+        memory: "1Gi"
+      requests:
+        cpu: "100m"
+        memory: "100Mi"
+    cleanup:
+      limits:
+        memory: "1Gi"
+      requests:
+        cpu: "500m"
+        memory: "100Mi"
+
+  # Priority classes for scheduling
+  priorityClassNames:
+    mon: system-node-critical
+    osd: system-node-critical
+    mgr: system-cluster-critical
+
