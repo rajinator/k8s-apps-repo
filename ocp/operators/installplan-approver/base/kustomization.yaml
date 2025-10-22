@@ -8,7 +8,7 @@ kind: Kustomization
 
 resources:
   # Operator deployment from official repository
-  - github.com/rajinator/installplan-approver-operator/config/default?ref=v0.1.1
+  - github.com/rajinator/installplan-approver-operator/config/default?ref=v0.1.2
 
 # Note: No additional labels in base
 # The upstream operator manifests already have appropriate labels
