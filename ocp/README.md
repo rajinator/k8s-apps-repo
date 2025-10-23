@@ -1,8 +1,17 @@
-# OpenShift Applications
+# OpenShift Manifests
 
-Applications designed for OpenShift Container Platform, leveraging OCP-specific features like OLM, Routes, and SCCs.
+Kubernetes manifests designed for OpenShift Container Platform, organized by type: operators, configs, and applications.
 
-## Available Applications
+## Repository Structure
+
+```
+ocp/
+├── operators/      # OLM-based operators and custom operators
+├── configs/        # Platform configurations and CRs
+└── apps/           # Application workloads
+```
+
+## Available Components
 
 ### InstallPlan Approver Operator
 - **Type**: Kubernetes Operator (not OLM-based)
@@ -16,10 +25,10 @@ Applications designed for OpenShift Container Platform, leveraging OCP-specific 
 
 **Quick Deploy:**
 ```bash
-oc apply -k installplan-approver-operator/base/
+oc apply -k operators/installplan-approver/base/
 ```
 
-**Documentation:** [installplan-approver-operator/README.md](installplan-approver-operator/README.md)
+**Documentation:** [operators/installplan-approver/README.md](operators/installplan-approver/README.md)
 
 ### OpenShift GitOps Operator
 - **Type**: OLM-based Operator
@@ -33,10 +42,10 @@ oc apply -k installplan-approver-operator/base/
 
 **Quick Deploy:**
 ```bash
-oc apply -k openshift-gitops-operator/base/
+oc apply -k operators/openshift-gitops/base/
 ```
 
-**Documentation:** [openshift-gitops-operator/README.md](openshift-gitops-operator/README.md)
+**Documentation:** See individual operator READMEs in `operators/<operator-name>/`
 
 ### cert-manager Operator
 - **Type**: OLM-based Operator
@@ -49,10 +58,8 @@ oc apply -k openshift-gitops-operator/base/
 
 **Quick Deploy:**
 ```bash
-oc apply -k cert-manager-operator/base/
+oc apply -k operators/cert-manager/base/
 ```
-
-**Documentation:** [cert-manager-operator/README.md](cert-manager-operator/README.md)
 
 ### GitLab Runner Operator
 - **Type**: OLM-based Operator
@@ -65,10 +72,8 @@ oc apply -k cert-manager-operator/base/
 
 **Quick Deploy:**
 ```bash
-oc apply -k gitlab-runner-operator/base/
+oc apply -k operators/gitlab-runner/base/
 ```
-
-**Documentation:** [gitlab-runner-operator/README.md](gitlab-runner-operator/README.md)
 
 ## Deployment Patterns
 
